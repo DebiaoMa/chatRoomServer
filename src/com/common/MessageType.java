@@ -14,4 +14,12 @@ public interface MessageType {
     String messageOnlineFriend = "5";
     //广播
     String messageBroadcast = "6";
+    //退出登陆
+    String messageOut = "7";
+    //文件传输，请求接收方ip
+    String messageGetIp = "8";
+    //准备接收文件
+    String messageReceiveFile = "9";
+    //文件传输返回的接收方ip
+    String messageIp = "10";
 }

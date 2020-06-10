@@ -3,9 +3,11 @@ package com.server.model;
 import com.common.Message;
 import com.common.MessageType;
 
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Date;
 
 /**
  * 服务器和某个客户端的通信线程
@@ -18,6 +20,10 @@ public class ServerConClientThread extends Thread{
         this.socket = socket;
     }
 
+    public Socket getSocket() {
+        return socket;
+    }
+
     @Override
     public void run() {
 
@@ -27,7 +33,8 @@ public class ServerConClientThread extends Thread{
                 ObjectInputStream ois = new ObjectInputStream(this.socket.getInputStream());
                 Message msg = (Message) ois.readObject();
 
-                System.out.println(msg.getSender() + " send to " + msg.getGetter() + ": " + msg.getCon());
+//                System.out.println(msg.getSender() + " send to " + msg.getGetter() + ": " + msg.getCon());
+                System.out.println(msg.toString());
 
                 if (msg.getMesType().equals(MessageType.messageCommMsg)) {
 
@@ -38,6 +45,10 @@ public class ServerConClientThread extends Thread{
                     dealGetOnlineMsg();
                 } else if (msg.getMesType().equals(MessageType.messageBroadcast)) {
                     dealBroadcastMsg(msg);
+                } else if (msg.getMesType().equals(MessageType.messageOut)) {
+                    dealSignOut(msg);
+                } else if (msg.getMesType().equals(MessageType.messageGetIp)) {
+                    dealGetIpRequest(msg);
                 }
 
             } catch (Exception e) {
@@ -68,27 +79,6 @@ public class ServerConClientThread extends Thread{
         }
 
     }
-
-//    public void dealGetOnlineMsg(Message msg) {
-//
-//        String res = ManageServerThread.getAllOnline();
-//        Message backMsg = new Message();
-//
-//        ServerConClientThread serverConClientThread = ManageServerThread.getClientThread(msg.getSender());
-//        ObjectOutputStream oos;
-//
-//        try {
-//            oos = new ObjectOutputStream(serverConClientThread.socket.getOutputStream());
-//            backMsg.setMesType(MessageType.messageOnlineFriend);
-//            backMsg.setSender("server");
-//            backMsg.setGetter(msg.getSender());
-//            backMsg.setCon(res);
-//            System.out.println(backMsg.toString());
-//            oos.writeObject(backMsg);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
 
     public void dealGetOnlineMsg() {
 
@@ -154,5 +144,54 @@ public class ServerConClientThread extends Thread{
 
         }
 
+    }
+
+    public void dealSignOut(Message msg) {
+
+        ManageServerThread.deleteOutUser(msg.getSender());
+        System.out.println(ManageServerThread.getAllOnline());
+
+            //广播下线情况
+        dealGetOnlineMsg();
+    }
+
+    public void dealGetIpRequest(Message msg) {
+
+        ServerConClientThread receiver = ManageServerThread.getClientThread(msg.getGetter());
+        ObjectOutputStream reOos = null;
+
+        Message receive = new Message();
+        receive.setGetter(msg.getGetter());
+        receive.setSender(msg.getSender());
+        receive.setMesType(MessageType.messageReceiveFile);
+        receive.setCon(msg.getCon());
+        receive.setSendTime(new Date().toString());
+        System.out.println(receive.toString());
+
+        try {
+            reOos = new ObjectOutputStream(receiver.socket.getOutputStream());
+            reOos.writeObject(receive);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        ServerConClientThread sender = ManageServerThread.getClientThread(msg.getSender());
+        ObjectOutputStream seOos = null;
+
+        Message ipMsg = new Message();
+        ipMsg.setMesType(MessageType.messageIp);
+        ipMsg.setGetter(msg.getSender());
+        ipMsg.setSender(msg.getGetter()); //模拟发送方为文件接收
+        ipMsg.setCon(receiver.socket.getInetAddress().toString());
+        ipMsg.setSendTime(new Date().toString());
+
+        System.out.println(ipMsg.toString());
+
+        try {
+            seOos = new ObjectOutputStream(sender.socket.getOutputStream());
+            seOos.writeObject(ipMsg);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -36,4 +36,10 @@ public class ManageServerThread {
 
         return result;
     }
+
+    //删除下线用户
+    public static void deleteOutUser(String userId) {
+
+        hashMap.remove(userId);
+    }
 }
